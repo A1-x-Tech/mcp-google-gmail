@@ -1,0 +1,67 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.A1-x-Tech/mcp-google-gmail",
+  "title": "Gmail MCP",
+  "description": "MCP server for the Gmail API: search, read and send email, manage drafts, labels and the trash.",
+  "websiteUrl": "https://github.com/A1-x-Tech/mcp-google-gmail#readme",
+  "repository": {
+    "url": "https://github.com/A1-x-Tech/mcp-google-gmail",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "mcp-google-gmail",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "GOOGLE_GMAIL_CLIENT_ID",
+          "description": "Google OAuth2 client id (refresh-token flow).",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "GOOGLE_GMAIL_CLIENT_SECRET",
+          "description": "Google OAuth2 client secret (refresh-token flow). Treat it as a secret.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "GOOGLE_GMAIL_REFRESH_TOKEN",
+          "description": "Google OAuth2 refresh token, exchanged for access tokens automatically. Treat it as a secret.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "GOOGLE_GMAIL_ACCESS_TOKEN",
+          "description": "Static OAuth2 access token (~1h lifetime) — alternative to the refresh-token trio, mostly for testing.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "GOOGLE_GMAIL_API_BASE",
+          "description": "API root override.",
+          "isRequired": false,
+          "default": "https://gmail.googleapis.com"
+        },
+        {
+          "name": "GOOGLE_GMAIL_TIMEOUT_MS",
+          "description": "Per-request timeout in milliseconds.",
+          "isRequired": false,
+          "default": "60000"
+        },
+        {
+          "name": "GOOGLE_GMAIL_MAX_RETRIES",
+          "description": "Retries on transient errors (429 always; 5xx/network for reads).",
+          "isRequired": false,
+          "default": "3"
+        }
+      ]
+    }
+  ]
+}
