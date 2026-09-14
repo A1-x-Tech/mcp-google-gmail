@@ -3,8 +3,8 @@
 **English** | [Русский](./README.ru.md)
 
 [![npm](https://img.shields.io/npm/v/mcp-google-gmail)](https://www.npmjs.com/package/mcp-google-gmail)
-[![CI](https://github.com/A1-x-Tech/mcp-google-gmail/actions/workflows/ci.yml/badge.svg)](https://github.com/A1-x-Tech/mcp-google-gmail/actions/workflows/ci.yml)
 [![Glama](https://glama.ai/mcp/servers/A1-x-Tech/mcp-google-gmail/badges/score.svg)](https://glama.ai/mcp/servers/A1-x-Tech/mcp-google-gmail)
+[![CI](https://github.com/A1-x-Tech/mcp-google-gmail/actions/workflows/ci.yml/badge.svg)](https://github.com/A1-x-Tech/mcp-google-gmail/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 **A1 Gmail MCP** lets an AI app work with your Gmail mailbox in plain language. Search and read mail, prepare replies as drafts, send them when you are ready, keep labels tidy and use the trash instead of permanent deletion.
