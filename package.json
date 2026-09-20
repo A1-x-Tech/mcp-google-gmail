@@ -1,6 +1,6 @@
 {
   "name": "mcp-google-gmail",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server for the Gmail API — search, read and send email, manage drafts, labels and the trash. For Claude, Cursor, Codex and other AI clients.",
   "mcpName": "io.github.A1-x-Tech/mcp-google-gmail",
   "type": "module",
@@ -49,6 +49,7 @@
     "url": "https://github.com/A1-x-Tech/mcp-google-gmail/issues"
   },
   "dependencies": {
+    "@a1-x-tech/mcp-google-auth": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.25.0"
   },

@@ -1,9 +1,22 @@
 import { randomBytes } from "node:crypto";
 import type { GoogleGmailConfig, LabelListVisibility, MessageListVisibility } from "./types.js";
 import { GoogleGmailError } from "./types.js";
-import { CredentialsError } from "./config.js";
+import { CredentialsError, DEFAULT_BASE } from "./config.js";
 
 /** The Gmail API uses all five verbs (labels.patch is PATCH, drafts.update is PUT). */
+/**
+ * The slice of the auth component's TokenProvider this client consumes
+ * (structurally satisfied by `TokenProvider` from @a1-x-tech/mcp-google-auth).
+ * Kept as a local interface so the client stays testable with a plain object
+ * and never depends on the component's internals.
+ */
+export interface AccessTokenProvider {
+  /** A valid Bearer token; `true` forces a re-mint (the 401 replay path). */
+  getAccessToken(forceRefresh?: boolean): Promise<string>;
+  /** True when a 401 replay is worth trying (a refresh token exists). */
+  canRefresh(): boolean;
+}
+
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /** Google's OAuth2 token endpoint — refresh tokens are exchanged here. */
@@ -390,7 +403,16 @@ export class GoogleGmailClient {
   /** In-flight refresh, deduping concurrent token requests. */
   private refreshInFlight?: Promise<string>;
 
-  constructor(private readonly config: GoogleGmailConfig) {
+  constructor(
+    private readonly config: GoogleGmailConfig,
+    /**
+     * Fallback token source (the in-chat login of @a1-x-tech/mcp-google-auth).
+     * Consulted only when the env-derived config carries no credentials —
+     * env wins (component invariant 3), so existing refresh-triple and
+     * access-token installs behave exactly as before.
+     */
+    private readonly tokenProvider?: AccessTokenProvider,
+  ) {
     this.base = config.apiBase.endsWith("/") ? config.apiBase : config.apiBase + "/";
     this.timeoutMs = config.timeoutMs ?? 60_000;
     this.maxRetries = config.maxRetries ?? 3;
@@ -399,6 +421,18 @@ export class GoogleGmailClient {
 
   private canRefresh(): boolean {
     return Boolean(this.config.refreshToken && this.config.clientId && this.config.clientSecret);
+  }
+
+  /**
+   * Whether a 401 is worth one re-mint + replay: either the env config can mint
+   * from its refresh triple, or the provider holds a refresh token (env or
+   * stored login). A static env access token can never be re-minted, so a 401
+   * there is final — replaying it would just burn a second request.
+   */
+  private canReplayOn401(): boolean {
+    if (this.canRefresh()) return true;
+    if (this.config.accessToken) return false;
+    return this.tokenProvider?.canRefresh() ?? false;
   }
 
   /**
@@ -412,8 +446,11 @@ export class GoogleGmailClient {
    */
   private async accessToken(forceRefresh = false): Promise<string> {
     if (!this.canRefresh()) {
-      if (!this.config.accessToken) throw new CredentialsError();
-      return this.config.accessToken;
+      // Env wins over the provider (component invariant 3): a static
+      // GOOGLE_GMAIL_ACCESS_TOKEN keeps behaving exactly as before.
+      if (this.config.accessToken) return this.config.accessToken;
+      if (this.tokenProvider) return this.tokenProvider.getAccessToken(forceRefresh);
+      throw new CredentialsError();
     }
     if (!forceRefresh && this.cachedToken && Date.now() < this.cachedToken.expiresAt) {
       return this.cachedToken.value;
@@ -558,7 +595,7 @@ export class GoogleGmailClient {
 
       // An expired/revoked access token: re-mint once and replay. The request
       // never executed, so this is safe for writes too.
-      if (res.status === 401 && this.canRefresh() && !refreshedOn401) {
+      if (res.status === 401 && this.canReplayOn401() && !refreshedOn401) {
         refreshedOn401 = true;
         await this.accessToken(true);
         continue;
@@ -884,4 +921,29 @@ function compact<T extends Record<string, unknown>>(obj: T): T {
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+
+/**
+ * One cheap Gmail read, used to verify a fresh in-chat login against the
+ * API the server actually talks to. Standalone (not a client method) because it
+ * runs with a token the client does not hold yet — the login is still being
+ * finished. Throws GoogleGmailError exactly like the client does, so the caller
+ * can recognize a disabled-API 403 and give the actionable advice.
+ */
+export async function probeApi(accessToken: string): Promise<void> {
+  const base = (process.env.GOOGLE_GMAIL_API_BASE || DEFAULT_BASE).replace(/\/+$/, "");
+  const res = await fetch(`${base}/gmail/v1/users/me/profile`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(10_000),
+  });
+  const text = await res.text();
+  if (res.ok) return;
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = text;
+  }
+  throw new GoogleGmailError(res.status, data);
 }

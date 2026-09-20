@@ -11,7 +11,8 @@
 
 It uses the Gmail API with your Google account. It distinguishes a draft you can still edit from a sent email that cannot be recalled, and makes the limits of the Gmail API explicit instead of implying that every mail task is reversible.
 
-- **18 tools.** Search and read messages and threads, send email directly or through drafts, manage the draft lifecycle, labels and the trash.
+- **24 tools.** Search and read messages and threads, send email directly or through drafts, manage the draft lifecycle, labels and the trash.
+- **Connects from the conversation.** Say "connect Gmail": the server walks you through the OAuth client, catches Google's redirect on `127.0.0.1` with PKCE and keeps the tokens itself — no config files, no restart.
 - **Send deliberately.** The draft → review → send path is first-class; sending is marked destructive, and the server never re-sends after an ambiguous failure — an email cannot be unsent.
 - **The trash is the safety net.** Removing mail goes through the reversible trash (about 30 days); there is deliberately no permanent message delete tool.
 - **Bounded reading.** Decoded bodies are truncated at an explicit limit and attachments come back as metadata, so a long newsletter cannot silently flood the conversation.
@@ -53,10 +54,10 @@ Start with a read-only question:
 
 ## Quick start
 
-You need Node.js 20+, a Google account and OAuth credentials from a Google Cloud project with the Gmail API enabled.
+You need Node.js 20+ and a Google account. Credentials are not required at install time — the server connects from the conversation.
 
-1. [Prepare Google OAuth access](#getting-access).
-2. Add the server to your AI app.
+1. Add the server to your AI app.
+2. Say "connect Gmail": the assistant walks you through [creating the OAuth client and approving access](#getting-access) without editing config files.
 3. Ask the read-only question above.
 
 <details open>
@@ -70,9 +71,6 @@ You need Node.js 20+, a Google account and OAuth credentials from a Google Cloud
 
 ```bash
 codex mcp add google-gmail \
-  --env GOOGLE_GMAIL_CLIENT_ID=your_client_id \
-  --env GOOGLE_GMAIL_CLIENT_SECRET=your_client_secret \
-  --env GOOGLE_GMAIL_REFRESH_TOKEN=your_refresh_token \
   -- npx -y mcp-google-gmail@latest
 ```
 
@@ -91,9 +89,6 @@ codex mcp list
 
 ```bash
 claude mcp add \
-  --env GOOGLE_GMAIL_CLIENT_ID=your_client_id \
-  --env GOOGLE_GMAIL_CLIENT_SECRET=your_client_secret \
-  --env GOOGLE_GMAIL_REFRESH_TOKEN=your_refresh_token \
   --transport stdio --scope user google-gmail \
   -- npx -y mcp-google-gmail@latest
 ```
@@ -120,12 +115,7 @@ This repository currently publishes an npm stdio package and does not contain a 
   "mcpServers": {
     "google-gmail": {
       "command": "npx",
-      "args": ["-y", "mcp-google-gmail@latest"],
-      "env": {
-        "GOOGLE_GMAIL_CLIENT_ID": "your_client_id",
-        "GOOGLE_GMAIL_CLIENT_SECRET": "your_client_secret",
-        "GOOGLE_GMAIL_REFRESH_TOKEN": "your_refresh_token"
-      }
+      "args": ["-y", "mcp-google-gmail@latest"]
     }
   }
 }
@@ -150,12 +140,7 @@ Add this to `~/.cursor/mcp.json` on macOS/Linux or `%USERPROFILE%\.cursor\mcp.js
     "google-gmail": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "mcp-google-gmail@latest"],
-      "env": {
-        "GOOGLE_GMAIL_CLIENT_ID": "your_client_id",
-        "GOOGLE_GMAIL_CLIENT_SECRET": "your_client_secret",
-        "GOOGLE_GMAIL_REFRESH_TOKEN": "your_refresh_token"
-      }
+      "args": ["-y", "mcp-google-gmail@latest"]
     }
   }
 }
@@ -178,19 +163,9 @@ Run **MCP: Open User Configuration** and add:
     "google-gmail": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "mcp-google-gmail@latest"],
-      "env": {
-        "GOOGLE_GMAIL_CLIENT_ID": "${input:gmail_client_id}",
-        "GOOGLE_GMAIL_CLIENT_SECRET": "${input:gmail_client_secret}",
-        "GOOGLE_GMAIL_REFRESH_TOKEN": "${input:gmail_refresh_token}"
-      }
+      "args": ["-y", "mcp-google-gmail@latest"]
     }
-  },
-  "inputs": [
-    { "type": "promptString", "id": "gmail_client_id", "description": "Google OAuth client ID" },
-    { "type": "promptString", "id": "gmail_client_secret", "description": "Google OAuth client secret", "password": true },
-    { "type": "promptString", "id": "gmail_refresh_token", "description": "Google OAuth refresh token", "password": true }
-  ]
+  }
 }
 ```
 
@@ -246,7 +221,20 @@ The AI client controls confirmation prompts. The server marks reads, writes and 
 
 ## Getting access
 
-Gmail requires OAuth 2.0; an API key is not enough.
+Google Gmail requires OAuth 2.0; an API key is not enough. There are two ways in, and the first one needs no configuration files.
+
+### Connect from the chat (recommended)
+
+Say "connect Gmail" and the assistant runs the flow with you:
+
+1. `setup_instructions` prints the checklist: create or select a Google Cloud project, enable **Gmail API**, configure the consent screen and create a **Desktop app** OAuth client.
+2. Download that client's JSON ("Download JSON") and give the assistant its **path** — `set_client` stores it owner-only. The secret never goes through the conversation.
+3. `start_login` returns a Google consent link. Open it **on this machine** and approve; the code comes back to a one-shot listener on `127.0.0.1` (PKCE), never through the chat.
+4. `finish_login` exchanges the code and saves the tokens to `~/.config/mcp-google-gmail/credentials.json` (mode 0600) and verifies them with a real Gmail API call — so an API that is still switched off is caught right there.
+
+The tokens are re-read on every call, so the connection works immediately — no restart of the AI app. `auth_status` shows what is connected, `logout` revokes and deletes it.
+
+### Environment variables (CI, unattended installs)
 
 1. Create or select a Google Cloud project and enable the **Gmail API**.
 2. Configure the OAuth consent screen and create a **Desktop app** OAuth client.
@@ -263,12 +251,15 @@ Testing-mode OAuth refresh tokens can expire after seven days. Publish the OAuth
 
 ## Configuration
 
+Every variable is optional — with none of them the server connects [from the chat](#connect-from-the-chat-recommended).
+
 | Variable | Required | Description |
 |---|---|---|
-| `GOOGLE_GMAIL_CLIENT_ID` | Yes* | OAuth client ID. |
-| `GOOGLE_GMAIL_CLIENT_SECRET` | Yes* | OAuth client secret. |
-| `GOOGLE_GMAIL_REFRESH_TOKEN` | Yes* | OAuth refresh token. |
-| `GOOGLE_GMAIL_ACCESS_TOKEN` | Yes* | Short-lived alternative to the OAuth trio (about 1 hour). |
+| `GOOGLE_GMAIL_CLIENT_ID` | No* | OAuth client ID. |
+| `GOOGLE_GMAIL_CLIENT_SECRET` | No* | OAuth client secret. |
+| `GOOGLE_GMAIL_REFRESH_TOKEN` | No* | OAuth refresh token. |
+| `GOOGLE_GMAIL_ACCESS_TOKEN` | No* | Short-lived alternative to the OAuth trio (about 1 hour). |
+| `GOOGLE_GMAIL_OAUTH_PORT` | No | Fixed loopback port for the in-chat login; useful over SSH port forwarding. |
 | `GOOGLE_GMAIL_API_BASE` | No | Gmail API base URL override. |
 | `GOOGLE_GMAIL_TIMEOUT_MS` | No | Per-request timeout; default `60000` ms. |
 | `GOOGLE_GMAIL_MAX_RETRIES` | No | Temporary-error retries; default `3`. |

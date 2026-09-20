@@ -11,7 +11,8 @@
 
 Сервер работает с Gmail API через ваш Google-аккаунт. Он отличает черновик, который ещё можно править, от отправленного письма, которое не вернуть, и явно показывает ограничения Gmail API, а не создаёт впечатление, что любое действие с почтой обратимо.
 
-- **18 инструментов.** Поиск и чтение писем и переписок, отправка напрямую или через черновики, полный жизненный цикл черновиков, ярлыки и корзина.
+- **24 инструментов.** Поиск и чтение писем и переписок, отправка напрямую или через черновики, полный жизненный цикл черновиков, ярлыки и корзина.
+- **Подключение из диалога.** Скажите «подключи Gmail»: сервер проведёт через создание OAuth-клиента, поймает редирект Google на `127.0.0.1` с PKCE и сам сохранит токены — без конфигов и перезапуска.
 - **Осознанная отправка.** Путь «черновик → проверка → отправка» — основной; отправка помечена как разрушительная, и после неоднозначного сбоя сервер никогда не отправляет письмо повторно — отправленное письмо не отозвать.
 - **Корзина — страховка.** Удаление почты идёт через обратимую корзину (около 30 дней); инструмента безвозвратного удаления писем сознательно нет.
 - **Чтение с ограничителем.** Декодированные тексты писем обрезаются по явному лимиту, а вложения возвращаются как метаданные, поэтому длинная рассылка не затопит диалог незаметно.
@@ -53,10 +54,10 @@
 
 ## Быстрый старт
 
-Нужны Node.js 20+, Google-аккаунт и OAuth-данные из проекта Google Cloud с включённым Gmail API.
+Нужны Node.js 20+ и Google-аккаунт. Учётные данные при установке не нужны: сервер подключается прямо в диалоге.
 
-1. [Подготовьте Google OAuth-доступ](#как-получить-доступ).
-2. Добавьте сервер в AI-приложение.
+1. Добавьте сервер в AI-приложение.
+2. Скажите «подключи Gmail» — ассистент проведёт [создание OAuth-клиента и выдачу доступа](#как-получить-доступ), не трогая конфиги.
 3. Отправьте запрос, который только читает данные.
 
 <details open>
@@ -70,9 +71,6 @@
 
 ```bash
 codex mcp add google-gmail \
-  --env GOOGLE_GMAIL_CLIENT_ID=your_client_id \
-  --env GOOGLE_GMAIL_CLIENT_SECRET=your_client_secret \
-  --env GOOGLE_GMAIL_REFRESH_TOKEN=your_refresh_token \
   -- npx -y mcp-google-gmail@latest
 ```
 
@@ -91,9 +89,6 @@ codex mcp list
 
 ```bash
 claude mcp add \
-  --env GOOGLE_GMAIL_CLIENT_ID=your_client_id \
-  --env GOOGLE_GMAIL_CLIENT_SECRET=your_client_secret \
-  --env GOOGLE_GMAIL_REFRESH_TOKEN=your_refresh_token \
   --transport stdio --scope user google-gmail \
   -- npx -y mcp-google-gmail@latest
 ```
@@ -120,12 +115,7 @@ claude mcp list
   "mcpServers": {
     "google-gmail": {
       "command": "npx",
-      "args": ["-y", "mcp-google-gmail@latest"],
-      "env": {
-        "GOOGLE_GMAIL_CLIENT_ID": "your_client_id",
-        "GOOGLE_GMAIL_CLIENT_SECRET": "your_client_secret",
-        "GOOGLE_GMAIL_REFRESH_TOKEN": "your_refresh_token"
-      }
+      "args": ["-y", "mcp-google-gmail@latest"]
     }
   }
 }
@@ -150,12 +140,7 @@ claude mcp list
     "google-gmail": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "mcp-google-gmail@latest"],
-      "env": {
-        "GOOGLE_GMAIL_CLIENT_ID": "your_client_id",
-        "GOOGLE_GMAIL_CLIENT_SECRET": "your_client_secret",
-        "GOOGLE_GMAIL_REFRESH_TOKEN": "your_refresh_token"
-      }
+      "args": ["-y", "mcp-google-gmail@latest"]
     }
   }
 }
@@ -178,19 +163,9 @@ claude mcp list
     "google-gmail": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "mcp-google-gmail@latest"],
-      "env": {
-        "GOOGLE_GMAIL_CLIENT_ID": "${input:gmail_client_id}",
-        "GOOGLE_GMAIL_CLIENT_SECRET": "${input:gmail_client_secret}",
-        "GOOGLE_GMAIL_REFRESH_TOKEN": "${input:gmail_refresh_token}"
-      }
+      "args": ["-y", "mcp-google-gmail@latest"]
     }
-  },
-  "inputs": [
-    { "type": "promptString", "id": "gmail_client_id", "description": "Google OAuth client ID" },
-    { "type": "promptString", "id": "gmail_client_secret", "description": "Google OAuth client secret", "password": true },
-    { "type": "promptString", "id": "gmail_refresh_token", "description": "Google OAuth refresh token", "password": true }
-  ]
+  }
 }
 ```
 
@@ -246,7 +221,20 @@ claude mcp list
 
 ## Как получить доступ
 
-Gmail требует OAuth 2.0: одного API-ключа недостаточно.
+Google Gmail требует OAuth 2.0: одного API-ключа недостаточно. Путей два, и первый не требует править конфигурационные файлы.
+
+### Подключение из диалога (рекомендуемый путь)
+
+Скажите «подключи Gmail», и ассистент пройдёт флоу вместе с вами:
+
+1. `setup_instructions` выдаёт чек-лист: создать или выбрать проект Google Cloud, включить **Gmail API**, настроить consent screen и создать OAuth-клиент типа **Desktop app**.
+2. Скачайте JSON этого клиента («Download JSON») и передайте ассистенту **путь** к файлу — `set_client` сохранит его с правами только для владельца. Секрет через переписку не проходит.
+3. `start_login` возвращает ссылку на согласие Google. Откройте её **на этой же машине** и подтвердите доступ: код возвращается на одноразовый слушатель `127.0.0.1` (PKCE), а не в чат.
+4. `finish_login` меняет код на токены и кладёт их в `~/.config/mcp-google-gmail/credentials.json` (права 0600) и проверяет их реальным вызовом Gmail API — так невключённый API ловится сразу.
+
+Токены перечитываются на каждый вызов, поэтому подключение действует немедленно — перезапускать AI-приложение не нужно. `auth_status` показывает состояние, `logout` отзывает токен и удаляет его.
+
+### Переменные окружения (CI и автоматические установки)
 
 1. Создайте или выберите проект Google Cloud и включите **Gmail API**.
 2. Настройте OAuth consent screen и создайте OAuth-клиент типа **Desktop app**.
@@ -263,12 +251,15 @@ Refresh token OAuth-приложения в режиме Testing может ис
 
 ## Конфигурация
 
+Все переменные необязательные — без единой из них сервер подключается [из диалога](#подключение-из-диалога-рекомендуемый-путь).
+
 | Переменная | Обязательна | Описание |
 |---|---|---|
-| `GOOGLE_GMAIL_CLIENT_ID` | Да* | OAuth client ID. |
-| `GOOGLE_GMAIL_CLIENT_SECRET` | Да* | OAuth client secret. |
-| `GOOGLE_GMAIL_REFRESH_TOKEN` | Да* | OAuth refresh token. |
-| `GOOGLE_GMAIL_ACCESS_TOKEN` | Да* | Короткоживущая альтернатива OAuth-тройке (около 1 часа). |
+| `GOOGLE_GMAIL_CLIENT_ID` | Нет* | OAuth client ID. |
+| `GOOGLE_GMAIL_CLIENT_SECRET` | Нет* | OAuth client secret. |
+| `GOOGLE_GMAIL_REFRESH_TOKEN` | Нет* | OAuth refresh token. |
+| `GOOGLE_GMAIL_ACCESS_TOKEN` | Нет* | Короткоживущая альтернатива OAuth-тройке (около 1 часа). |
+| `GOOGLE_GMAIL_OAUTH_PORT` | Нет | Фиксированный порт loopback-слушателя для входа из диалога; нужен при пробросе портов по SSH. |
 | `GOOGLE_GMAIL_API_BASE` | Нет | Переопределяет базовый URL Gmail API. |
 | `GOOGLE_GMAIL_TIMEOUT_MS` | Нет | Тайм-аут одного запроса; по умолчанию `60000` мс. |
 | `GOOGLE_GMAIL_MAX_RETRIES` | Нет | Повторы временных ошибок; по умолчанию `3`. |
