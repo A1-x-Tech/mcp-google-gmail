@@ -1,6 +1,6 @@
 {
   "name": "mcp-google-gmail",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "MCP server for the Gmail API — search, read and send email, manage drafts, labels and the trash. For Claude, Cursor, Codex and other AI clients.",
   "mcpName": "io.github.A1-x-Tech/mcp-google-gmail",
   "type": "module",
