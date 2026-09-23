@@ -47,20 +47,6 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   restart needed); setting the environment variables + restart remains the
   documented alternative.
 
-## [Unreleased]
-
-### Fixed
-
-- `list_messages` hydration no longer fires the whole page of metadata reads at
-  once (bounded to 8 parallel GETs — a 100-hit page burst ~500 quota units
-  instantly) and no longer fails the entire page when a message is deleted
-  between the search and its metadata read: the racing 404 is skipped and the
-  rest of the page is returned.
-- `send_message` accepts cc-only/bcc-only sends: `to` is now optional and the
-  requirement is at least one recipient across `to`/`cc`/`bcc`, matching what
-  Gmail itself allows (previously only `create_draft` + `send_draft` could do
-  this).
-
 ## [0.1.0] — 2026-08-30
 
 ### Added
@@ -110,6 +96,18 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   with cleanup after success and failure.
 - CI (Node 20/22/24: typecheck + build + tests) and a daily live health check
   that skips itself when repo secrets are absent.
+
+### Fixed
+
+- `list_messages` hydration no longer fires the whole page of metadata reads at
+  once (bounded to 8 parallel GETs — a 100-hit page burst ~500 quota units
+  instantly) and no longer fails the entire page when a message is deleted
+  between the search and its metadata read: the racing 404 is skipped and the
+  rest of the page is returned.
+- `send_message` accepts cc-only/bcc-only sends: `to` is now optional and the
+  requirement is at least one recipient across `to`/`cc`/`bcc`, matching what
+  Gmail itself allows (previously only `create_draft` + `send_draft` could do
+  this).
 
 [1.0.0]: https://github.com/A1-x-Tech/mcp-google-gmail/releases/tag/v1.0.0
 [0.2.0]: https://github.com/A1-x-Tech/mcp-google-gmail/releases/tag/v0.2.0
