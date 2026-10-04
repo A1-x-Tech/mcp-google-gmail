@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "google-gmail": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-google-gmail@latest"
+      ]
+    }
+  }
+}
