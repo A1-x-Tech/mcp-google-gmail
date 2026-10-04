@@ -1,0 +1,24 @@
+{
+  "name": "mcp-google-gmail",
+  "displayName": "A1 Gmail MCP",
+  "description": "MCP server for the Gmail API — search, read and send email, manage drafts, labels and the trash. For Claude, Cursor, Codex and other AI clients.",
+  "author": {
+    "name": "Aleksandr Kovalko & Zinnur Temerbekov"
+  },
+  "homepage": "https://github.com/A1-x-Tech/mcp-google-gmail#readme",
+  "repository": "https://github.com/A1-x-Tech/mcp-google-gmail",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "google",
+    "gmail",
+    "email",
+    "mail",
+    "drafts",
+    "claude",
+    "cursor",
+    "codex"
+  ],
+  "logo": "assets/a1-logo.svg"
+}
