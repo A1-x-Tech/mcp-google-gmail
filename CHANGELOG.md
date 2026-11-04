@@ -7,6 +7,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.2] — 2026-11-05
+
 ### Fixed
 
 - Telemetry: failures of the login tools (`start_login`, `finish_login`, `set_client`, …) now carry
@@ -138,7 +140,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
   Gmail itself allows (previously only `create_draft` + `send_draft` could do
   this).
 
-[Unreleased]: https://github.com/A1-x-Tech/mcp-google-gmail/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/A1-x-Tech/mcp-google-gmail/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/A1-x-Tech/mcp-google-gmail/releases/tag/v1.1.2
 [1.1.1]: https://github.com/A1-x-Tech/mcp-google-gmail/releases/tag/v1.1.1
 [1.1.0]: https://github.com/A1-x-Tech/mcp-google-gmail/releases/tag/v1.1.0
 [1.0.0]: https://github.com/A1-x-Tech/mcp-google-gmail/releases/tag/v1.0.0
